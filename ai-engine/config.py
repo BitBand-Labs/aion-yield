@@ -38,6 +38,8 @@ CHAIN_CONFIG = {
         "autonomous_allocator": "0x7C9eF492Cc14A795d8BAa6937b4cF23F258Ce6f1",
         "price_oracle": "0xdBF02AeBf96D1C3E8B4E35f61C27A37cc6f601e4",
         "mock_usdc": "0x331cB2F787b2DC57855Bb30B51bE09aEF53e84C0",
+        "ai_agent_registry": os.getenv("SEPOLIA_AI_AGENT_REGISTRY", ""),
+        "ai_attestation_registry": os.getenv("SEPOLIA_AI_ATTESTATION_REGISTRY", ""),
     },
     "fuji": {
         "rpc_url": AVAX_FUJI_RPC_URL,
@@ -46,6 +48,8 @@ CHAIN_CONFIG = {
         "autonomous_allocator": "0x5A6259254dA9d37081E2FAd716885ad8393a5408",
         "price_oracle": "0xbf8528f513111b8352cdc649A5C9031a83dB3e20",
         "mock_usdc": "0xa35C19170526eB8764a995fb5298eD1156B1b379",
+        "ai_agent_registry": os.getenv("FUJI_AI_AGENT_REGISTRY", ""),
+        "ai_attestation_registry": os.getenv("FUJI_AI_ATTESTATION_REGISTRY", ""),
     },
 }
 

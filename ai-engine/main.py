@@ -24,7 +24,8 @@ from typing import Optional
 from config import HOST, PORT, ANTHROPIC_API_KEY, CHAIN_CONFIG, get_chain_config
 from chain_reader import get_vault_data, get_harvest_preview, get_asset_price, fetch_external_apys, fetch_market_context
 from ai_strategy import analyze_and_recommend, predict_yield
-from kite_payment import pay_for_inference, get_session_spend
+from kite_payment import pay_for_inference, get_session_spend, TOOL_PRICES
+from attestation import post_attestation
 
 app = FastAPI(
     title="AION Yield AI Strategy Engine",
@@ -124,6 +125,35 @@ async def kite_session_spend():
     return get_session_spend()
 
 
+@app.get("/mcp-info")
+async def mcp_info():
+    """Describe the AION MCP server: available tools, KITE prices, and connection info."""
+    return {
+        "name": "aion-yield-mcp",
+        "description": "AION Yield AI oracle — DeFi vault intelligence gated by Kite x402 micropayments",
+        "version": "1.0.0",
+        "kite_chain": {
+            "chain_id": 2368,
+            "rpc": "https://rpc.testnet.gokite.ai",
+            "explorer": "https://testnet.kitescan.ai",
+            "token": "KITE",
+        },
+        "transports": {
+            "stdio": "python mcp_server.py",
+            "sse": "python mcp_server.py --sse  (port 8001, /sse)",
+        },
+        "tools": [
+            {
+                "name": tool,
+                "price_kite": price,
+            }
+            for tool, price in TOOL_PRICES.items()
+            if not tool.startswith("ai_")
+        ],
+        "supported_chains": list(CHAIN_CONFIG.keys()),
+    }
+
+
 @app.post("/analyze")
 async def analyze(request: AnalyzeRequest):
     """AI-powered analysis: reads AionVault state, fetches external APYs and
@@ -158,12 +188,21 @@ async def analyze(request: AnalyzeRequest):
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
 
+    # Post on-chain attestation (fire-and-forget; never blocks the response)
+    attestation_id = await post_attestation(
+        action_type="analyze",
+        output=result,
+        kite_pay_tx=payment_proof.get("tx_hash") or "",
+        chain=request.chain,
+    )
+
     return {
         "chain": request.chain,
         "vault_state": vault_data,
         "market_context": market if "error" not in market else None,
         "ai_recommendation": result,
         "payment_proof": payment_proof,
+        "attestation_id": attestation_id,
     }
 
 
@@ -196,12 +235,21 @@ async def predict(request: PredictRequest):
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
 
+    # Post on-chain attestation (fire-and-forget; never blocks the response)
+    attestation_id = await post_attestation(
+        action_type="predict",
+        output=result,
+        kite_pay_tx=payment_proof.get("tx_hash") or "",
+        chain=request.chain,
+    )
+
     return {
         "chain": request.chain,
         "vault_state": vault_data,
         "market_context": market if "error" not in market else None,
         "prediction": result,
         "payment_proof": payment_proof,
+        "attestation_id": attestation_id,
     }
 
 
